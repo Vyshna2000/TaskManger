@@ -38,7 +38,10 @@ cd task-manager
 
 # 2. Set up a virtual environment
 python3 -m venv env
-source env/bin/activate   # On Windows: env\Scripts\activate
+
+source env/bin/activate   
+
+# On Windows: env\Scripts\activate
 
 # 3. Install dependencies
 pip install -r requirements.txt
