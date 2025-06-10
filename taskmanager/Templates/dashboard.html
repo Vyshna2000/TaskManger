@@ -1,0 +1,273 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Dashboard - Task Manager</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+
+        .dashboard-header {
+            padding: 2rem 0 1rem;
+            text-align: center;
+        }
+
+        .task-card {
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgb(0 0 0 / 0.1);
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+            margin-bottom: 1rem;
+        }
+
+        .task-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 8px 20px rgb(0 0 0 / 0.15);
+        }
+
+        .card-header {
+            cursor: pointer;
+        }
+
+        .status-badge {
+            font-size: 0.85rem;
+            padding: 0.25em 0.6em;
+            border-radius: 0.5rem;
+        }
+
+        .status-pending {
+            background-color: #ffc107;
+            color: #212529;
+        }
+
+        .status-in-progress {
+            background-color: #0d6efd;
+            color: white;
+        }
+
+        .status-completed {
+            background-color: #198754;
+            color: white;
+        }
+
+        .status-deferred {
+            background-color: #6c757d;
+            color: white;
+        }
+
+        .priority-badge {
+            font-size: 0.75rem;
+            padding: 0.2em 0.5em;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .priority-low {
+            background-color: #6c757d;
+            color: white;
+        }
+
+        .priority-medium {
+            background-color: #0d6efd;
+            color: white;
+        }
+
+        .priority-high {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        .priority-critical {
+            background-color: #842029;
+            color: white;
+        }
+
+        /* Minimal Pagination styles */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            list-style: none;
+            padding-left: 0;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .pagination li {
+            cursor: pointer;
+            padding: 0.3rem 0.7rem;
+            border-radius: 0.3rem;
+            border: none;
+            color: #0d6efd;
+            /* Bootstrap primary blue */
+            user-select: none;
+            background: transparent;
+            font-weight: normal;
+        }
+
+        .pagination li:hover {
+            text-decoration: underline;
+        }
+
+        .pagination li.active {
+            color: #0d6efd;
+            font-weight: 600;
+            background: transparent;
+            border: none;
+        }
+
+        .pagination li.disabled {
+            color: #6c757d;
+            cursor: default;
+            background: transparent;
+            border: none;
+        }
+    </style>
+</head>
+
+<body>
+
+    {% include 'navbar.html' %}
+
+    <div class="container">
+        <div class="dashboard-header">
+            <h2 class="fw-bold">📝 Your Tasks</h2>
+            <p class="text-muted">Tap a task to expand and see all details.</p>
+        </div>
+        <form method="POST" action="{% url 'dashboard' %}">
+            {% csrf_token %}
+            <div class="d-flex justify-content-end align-items-center mt-3 mb-4 gap-2">
+                <input type="text" id="taskSearchInput" name="search" class="form-control form-control-sm"
+                    placeholder="Search by title, status or due date..." value="{{ search_query }}"
+                    style="max-width: 300px;" />
+                <button type="submit" class="btn btn-outline-secondary btn-sm" title="Search">
+                    <i class="bi bi-search"></i>
+                </button>
+            </div>
+        </form>
+
+        <form method="POST" action="{% url 'dashboard' %}" class="mb-3 d-flex align-items-center gap-3">
+            {% csrf_token %}
+            <label for="sortSelect" class="form-label mb-0 fw-semibold">Sort by:</label>
+            <select name="sort_by" id="sortSelect" class="form-select form-select-sm w-auto">
+                <option value="title-asc" {% if sort_flags.title_asc %}selected{% endif %}>Title ▲</option>
+                <option value="title-desc" {% if sort_flags.title_desc %}selected{% endif %}>Title ▼</option>
+                <option value="status-asc" {% if sort_flags.status_asc %}selected{% endif %}>Status ▲</option>
+                <option value="status-desc" {% if sort_flags.status_desc %}selected{% endif %}>Status ▼</option>
+                <option value="dueDate-asc" {% if sort_flags.dueDate_asc %}selected{% endif %}>Due Date ▲</option>
+                <option value="dueDate-desc" {% if sort_flags.dueDate_desc %}selected{% endif %}>Due Date ▼</option>
+
+
+            </select>
+            <button type="submit" class="btn btn-sm btn-primary">Sort</button>
+        </form>
+
+
+        {% if tasks %}
+        <div id="tasksList">
+            <div class="list accordion" id="taskAccordion">
+                {% for task in tasks %}
+                <div class="card task-card shadow-sm list-item" data-title="{{ task.title|escapejs }}"
+                    data-status="{{ task.status|escapejs }}" data-due-date="{{ task.due_date|date:'Y-m-d' }}">
+                    <div class="card-header" id="heading{{ forloop.counter }}" data-bs-toggle="collapse"
+                        data-bs-target="#collapse{{ forloop.counter }}" aria-expanded="false"
+                        aria-controls="collapse{{ forloop.counter }}">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">
+                                <i class="bi bi-check-circle-fill text-primary"></i> {{ task.title }}
+                            </h5>
+                            <div>
+                                <!-- Status Badge -->
+                                <span class="status-badge 
+                                    {% if task.status == 'PENDING' %}status-pending{% endif %}
+                                    {% if task.status == 'IN_PROGRESS' %}status-in-progress{% endif %}
+                                    {% if task.status == 'COMPLETED' %}status-completed{% endif %}
+                                    {% if task.status == 'DEFERRED' %}status-deferred{% endif %}
+                                    ">
+                                    {{ task.get_status_display }}
+                                </span> &nbsp; &nbsp; &nbsp; &nbsp;
+                                <!-- Priority Badge -->
+                                <span class="priority-badge 
+                                    {% if task.priority == 'LOW' %}priority-low{% endif %}
+                                    {% if task.priority == 'MEDIUM' %}priority-medium{% endif %}
+                                    {% if task.priority == 'HIGH' %}priority-high{% endif %}
+                                    {% if task.priority == 'CRITICAL' %}priority-critical{% endif %}
+                                    ">
+                                    {{ task.get_priority_display }}
+                                </span>
+                                <i class="bi bi-chevron-down ms-2"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="collapse{{ forloop.counter }}" class="collapse"
+                        aria-labelledby="heading{{ forloop.counter }}" data-bs-parent="#taskAccordion">
+                        <div class="card-body">
+                            <p><strong>Description:</strong><br>{{ task.description|linebreaksbr }}</p>
+                            <p><strong>Category:</strong> {{ task.get_category_display }}</p>
+                            <p><strong>Due Date:</strong> {{ task.due_date|date:"M d, Y" }}</p>
+                            <p><strong>Created At:</strong> {{ task.created_at|date:"M d, Y · h:i A" }}</p>
+                            <p><strong>Last Updated:</strong> {{ task.updated_at|date:"M d, Y · h:i A" }}</p>
+
+                            <div class="d-flex gap-2 mt-3">
+                                <a href="{% url 'edit_task' task.id %}" class="btn btn-primary btn-sm">
+                                    <i class="bi bi-pencil-square"></i> Edit
+                                </a>
+                                <form method="POST" action="{% url 'delete_task' task.id %}"
+                                    onsubmit="return confirm('Are you sure you want to delete this task?');">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-danger btn-sm">
+                                        <i class="bi bi-trash"></i> Delete
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Pagination controls -->
+            <ul class="pagination"></ul>
+        </div>
+        {% else %}
+        <div class="alert alert-info text-center mt-5" role="alert">
+            You have no tasks yet. <a href="{% url 'add_task' %}" class="alert-link">Add your first task now.</a>
+        </div>
+        {% endif %}
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/list.js/2.3.1/list.min.js"></script>
+    <script>
+        // Initialize List.js on tasksList with pagination
+        var options = {
+            valueNames: [
+                { name: 'title', attr: 'data-title' },
+                { name: 'status', attr: 'data-status' },
+                { name: 'dueDate', attr: 'data-due-date' }
+            ],
+            page: 5,  // items per page
+            pagination: true
+        };
+
+        var taskList = new List('tasksList', options);
+
+        // Sort when dropdown changes
+        document.getElementById('sortSelect').addEventListener('change', function () {
+            var val = this.value.split('-'); // e.g. ["title", "asc"]
+            taskList.sort(val[0], { order: val[1] });
+            taskList.show(1, options.page); // Reset to first page on sort
+        });
+
+        // Default sort on page load
+        taskList.sort('title', { order: 'asc' });
+    </script>
+</body>
+
+</html>
