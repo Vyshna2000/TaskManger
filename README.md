@@ -1,4 +1,5 @@
 🗂️ Task Manager Web Application
+
 A simple and user-friendly web application to manage daily tasks efficiently. Users can register, log in, and manage tasks with due dates, priorities, and statuses.
 
 🔧 Tech Stack
