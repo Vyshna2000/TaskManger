@@ -1,4 +1,5 @@
 🗂️ Task Manager Web Application
+
 Tech Stack: Django | Python | SQLite | HTML | CSS | Bootstrap
 
 📌 Key Features:
